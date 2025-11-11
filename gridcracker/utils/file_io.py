@@ -56,19 +56,34 @@ class FileHandler:
         os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
         data = {}
         if os.path.exists(path):
-            with open(path, "r", encoding="utf-8") as f:
-                try:
+            try:
+                with open(path, "r", encoding="utf-8") as f:
                     data = json.load(f)
-                except Exception:
-                    data = {}
+                    if not isinstance(data, dict):
+                        data = {}
+            except Exception:
+                data = {}
         data[name] = puzzle
         with open(path, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=2)
 
     @staticmethod
     def load_json(path: str) -> Dict[str, Any]:
-        with open(path, "r", encoding="utf-8") as f:
-            return json.load(f)
+        """Load and return JSON content as dict. If file missing or invalid JSON, return empty dict."""
+        if not os.path.exists(path):
+            raise FileNotFoundError(path)
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                if isinstance(data, dict):
+                    return data
+                # If file contains a list or other valid JSON, wrap it under a default key
+                return {"data": data}
+        except json.JSONDecodeError:
+            # corrupted or empty file: return empty dict to avoid crashing callers
+            return {}
+        except Exception:
+            return {}
 
     @staticmethod
     def save_text(puzzle: List[List[int]], path: str) -> None:
